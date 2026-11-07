@@ -9,6 +9,10 @@ if [ -d /data ] && [ "$(stat -c '%u:%g' /data)" != "${PUID}:${PGID}" ]; then
   chown -R "${PUID}:${PGID}" /data
 fi
 
+# setpriv keeps root's HOME, so Shodh would look for the bundled NER model under
+# /root/.cache, fail to create it there and fall back to rule-based extraction.
+export HOME=/home/shodh
+
 # --clear-groups, not --init-groups: the latter needs a passwd entry for the uid,
 # which an arbitrary PUID does not have inside the image.
 exec setpriv --reuid="${PUID}" --regid="${PGID}" --clear-groups "$@"
