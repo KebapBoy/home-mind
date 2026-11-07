@@ -9,6 +9,8 @@ services:
     container_name: home-mind-shodh
     restart: unless-stopped
     environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
       - SHODH_HOST=0.0.0.0
       - SHODH_PORT=3030
       - SHODH_DEV_API_KEY=${SHODH_API_KEY}
@@ -47,6 +49,8 @@ services:
       context: ./src/home-mind-server
     container_name: home-mind-server
     restart: unless-stopped
+    # Run as this uid:gid so a bind-mounted CONVERSATION_DATA_PATH owned by you is writable.
+    user: "${PUID:-1001}:${PGID:-1001}"
     ports:
       - "${PORT:-3100}:3100"
     environment:
@@ -83,7 +87,7 @@ services:
       - TTS_VOICE=${TTS_VOICE:-alloy}
       - TZ=${TZ:-Europe/Prague}
     volumes:
-      - conversation_data:/data
+      - ${CONVERSATION_DATA_PATH:-conversation_data}:/data
     depends_on:
       shodh:
         condition: service_healthy
