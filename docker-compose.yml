@@ -6,7 +6,6 @@ services:
   shodh:
     build:
       context: ./docker/shodh
-    container_name: home-mind-shodh
     restart: unless-stopped
     environment:
       - PUID=${PUID:-1000}
@@ -34,7 +33,6 @@ services:
       args:
         VITE_DEFAULT_SERVER_URL: ${VITE_DEFAULT_SERVER_URL:-}
         VITE_DEFAULT_API_TOKEN: ${VITE_DEFAULT_API_TOKEN:-}
-    container_name: home-mind-app
     restart: unless-stopped
     ports:
       - "${APP_PORT:-4174}:80"
@@ -45,7 +43,6 @@ services:
   server:
     build:
       context: ./src/home-mind-server
-    container_name: home-mind-server
     restart: unless-stopped
     # Run as this uid:gid so a bind-mounted CONVERSATION_DATA_PATH owned by you is writable.
     user: "${PUID:-1001}:${PGID:-1001}"
