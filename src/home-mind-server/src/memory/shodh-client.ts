@@ -266,7 +266,9 @@ export class ShodhMemoryClient {
     const response = await this.request<ShodhProactiveContextResponse>(
       "/api/proactive_context",
       "POST",
-      { user_id: userId, context: currentContext, limit }
+      // auto_ingest defaults to on server-side and would store every raw user
+      // utterance as its own memory next to the extracted facts.
+      { user_id: userId, context: currentContext, limit, auto_ingest: false }
     );
 
     return response.memories.map((mem) => this.toFact(mem, userId));

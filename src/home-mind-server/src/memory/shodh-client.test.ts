@@ -346,6 +346,7 @@ describe("ShodhMemoryClient", () => {
             user_id: "user-1",
             context: "bedroom temperature",
             limit: 10,
+            auto_ingest: false,
           }),
         })
       );
