@@ -16,8 +16,6 @@ services:
       - SHODH_DEV_API_KEY=${SHODH_API_KEY}
     volumes:
       - ${SHODH_DATA_PATH:-shodh_data}:/data
-    ports:
-      - "3030:3030"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
       interval: 30s
@@ -52,7 +50,7 @@ services:
     # Run as this uid:gid so a bind-mounted CONVERSATION_DATA_PATH owned by you is writable.
     user: "${PUID:-1001}:${PGID:-1001}"
     ports:
-      - "${PORT:-3100}:3100"
+      - "127.0.0.1:${PORT:-3100}:3100"
     environment:
       - PORT=3100
       - LOG_LEVEL=${LOG_LEVEL:-info}
