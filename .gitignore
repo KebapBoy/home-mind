@@ -296,3 +296,9 @@ jure-private/
 # Local tool state
 .omc/
 .playwright-mcp/
+
+# Shodh release files, if extracted here by hand; the image already ships them
+docker/shodh/shodh
+docker/shodh/shodh-memory
+docker/shodh/shodh-memory-server
+docker/shodh/shodh-tui
