@@ -8,6 +8,10 @@
 FROM varunshodh/shodh-memory:0.2.0@sha256:90047c1fd48181d49465dc4509a9d2006ef75616f7c7df276f25f3d399ddd51f
 
 USER root
+
+# CVE-2026-111497: Debian fix for libbrotli1 (1.0.9-2+deb12u1), remove once upstream ships it
+RUN apt-get update && apt-get install -y --only-upgrade libbrotli1 && rm -rf /var/lib/apt/lists/*
+
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
