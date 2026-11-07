@@ -2,6 +2,28 @@
 
 All notable changes to Home Mind are documented here.
 
+## [Unreleased] - KebapBoy fork, 2026-11-07
+
+Modified version of [hoornet/home-mind](https://github.com/hoornet/home-mind), based on 0.20.2 (`383077a`). These changes are not part of an upstream release.
+
+### Changed (docker-compose.yml, docker/shodh/entrypoint.sh)
+- **Shodh and the server run as a configurable user.** `PUID` and `PGID` set the uid:gid both containers run as (Shodh defaults to 1000, the server to 1001), and Shodh's entrypoint hands `/data` to that user, so bind-mounted data stays owned by you. `CONVERSATION_DATA_PATH` lets the conversation store be a bind mount instead of the `conversation_data` volume. Optional; without them nothing changes.
+- **Shodh and the server stay off the LAN.** Shodh no longer publishes port 3030, since only the server talks to it over the Compose network, and the server binds to `127.0.0.1`. A Home Assistant on another machine therefore needs a reverse proxy in front of the server, or the port mapping changed back.
+- **No fixed container names.** Compose names the containers per project, so the stack can be deployed under any project name, for example by Dockhand. Containers are now called `<project>-shodh-1` and `<project>-server-1`.
+
+### Fixed (docker/shodh/entrypoint.sh)
+- **Shodh finds its bundled NER model again.** After dropping privileges it still had root's `HOME`, looked for the model under `/root/.cache`, failed to create that directory and fell back to rule-based entity extraction. It now uses `/home/shodh`, where the image ships the model. No configuration change.
+
+### Fixed (memory/shodh-client.ts)
+- **Recall no longer stores every raw message as a memory.** `/api/proactive_context` ingests the query by default, which saved each user message as its own memory next to the facts extracted from it. Recall now sends `auto_ingest: false`. No configuration change.
+
+### Security (docker/shodh/Dockerfile)
+- **libbrotli1 is upgraded in the Shodh image** for CVE-2026-111497, until upstream Shodh publishes a rebuilt image. Rebuild the image to pick it up.
+
+### Added (scripts/diff.sh, .gitignore)
+- **`scripts/diff.sh`** shows what an update from `origin/main` would bring, without pulling, merging or deploying, and warns where it touches files you changed locally.
+- **Shodh release files are ignored** in `docker/shodh/`, so binaries extracted there by hand cannot be committed by accident.
+
 ## [0.20.2] - 2026-10-31
 
 ### Fixed (llm/prompts.ts)

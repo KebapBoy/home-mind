@@ -1,5 +1,7 @@
 # Home Mind
 
+> **This is a modified fork** of [hoornet/home-mind](https://github.com/hoornet/home-mind), maintained by [KebapBoy](https://github.com/KebapBoy). What differs from upstream is listed under [Unreleased in the CHANGELOG](CHANGELOG.md#unreleased---kebapboy-fork-2026-11-07). The rest of this README is upstream's.
+
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fhoornet%2Fhome-mind%2Fmain%2Fsrc%2Fhome-mind-server%2Fpackage.json&query=%24.version&label=Version&color=brightgreen)](https://github.com/hoornet/home-mind/releases)
 [![Status](https://img.shields.io/badge/Status-Voice%20Working-success.svg)]()
