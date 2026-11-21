@@ -4,7 +4,7 @@ All notable changes to Home Mind are documented here.
 
 ## [Unreleased] - KebapBoy fork, 2026-11-07
 
-Modified version of [hoornet/home-mind](https://github.com/hoornet/home-mind), based on 0.20.2 (`383077a`). These changes are not part of an upstream release.
+Modified version of [hoornet/home-mind](https://github.com/hoornet/home-mind), based on 0.22.1 (`9bc8c8f`). These changes are not part of an upstream release.
 
 ### Changed (docker-compose.yml, docker/shodh/entrypoint.sh)
 - **Shodh and the server run as a configurable user.** `PUID` and `PGID` set the uid:gid both containers run as (Shodh defaults to 1000, the server to 1001), and Shodh's entrypoint hands `/data` to that user, so bind-mounted data stays owned by you. `CONVERSATION_DATA_PATH` lets the conversation store be a bind mount instead of the `conversation_data` volume. Optional; without them nothing changes.
@@ -23,6 +23,51 @@ Modified version of [hoornet/home-mind](https://github.com/hoornet/home-mind), b
 ### Added (scripts/diff.sh, .gitignore)
 - **`scripts/diff.sh`** shows what an update from `origin/main` would bring, without pulling, merging or deploying, and warns where it touches files you changed locally.
 - **Shodh release files are ignored** in `docker/shodh/`, so binaries extracted there by hand cannot be committed by accident.
+
+## [0.22.1] - 2026-11-20
+
+### Fixed (index.ts, api/listen.ts)
+- **When its port is already in use, the server stops and says why.** If something else holds port 3100, for example another copy of Home Mind that is still running, the server now logs `Could not listen on port 3100` and exits, so Docker or the add-on can start it again once the port is free, rather than showing "Ready" for a server that cannot answer.
+
+No configuration change.
+
+## [0.22.0] - 2026-11-20
+
+### Security (jobs/api-token-notice.ts)
+- **A server with no API token at all now says so in Home Assistant.** Since 0.21.0, `scripts/deploy.sh` creates a token for Docker; a server started another way, such as `docker compose up -d` without running `deploy.sh` once, runs without one. Home Assistant now shows a notification when that is the case, explaining how to add one: run `scripts/deploy.sh` once, or set your own `API_TOKEN`, then add the Home Mind integration again with that token. It clears itself once the token is in use.
+- **The "not protected yet" notice comes back every 6 hours while it applies.** Home Assistant forgets notifications when it restarts, so a single notice at startup could disappear while the API was still open. It stops once the token is in use.
+
+### Removed (api/routes.ts, config.ts, docker-compose.yml, scripts/deploy.sh)
+- **The speech-to-text and text-to-speech endpoints (`/api/stt`, `/api/tts`), the CORS setting and the optional app container are gone.** They served a companion app that was never released, so nothing that ships with Home Mind used them. Voice through Home Assistant Assist is unaffected: it runs on your Assist pipeline's own speech engines, as before.
+- **The `STT_*`, `TTS_*` and `CORS_ORIGINS` settings are no longer read.** If they are in your `.env` or Docker environment, they are ignored and you can delete them. The add-on's matching options (`stt_*`, `tts_*`, `cors_origins`) are removed in its next version.
+- `scripts/deploy.sh` now deploys Shodh and the server only. The `multer` and `cors` dependencies are removed with the code that used them.
+
+No configuration change is needed. Everything else works as before.
+
+## [0.21.0] - 2026-11-20
+
+### Security (api/auth.ts, add-on, scripts/deploy.sh)
+- **The API gets a token by default.** If you haven't set `API_TOKEN` (`api_token` in the add-on), the add-on, or `scripts/deploy.sh` for Docker, now creates one. The server requires it from the first request that carries it, so the Home Mind integration keeps working on the day you update: the integration 0.11.0 or later picks the token up from the add-on by itself and uses it as soon as Home Assistant has restarted, and from then on requests without it are refused. Until that happens, Home Assistant shows a notification saying the API is not protected yet, and a client that still sends a token from an earlier setup keeps working too. The integration's setup still tells you if the token you entered is not the server's.
+- With Docker, run `scripts/deploy.sh` once after updating: it creates the token. `docker compose up -d` on its own doesn't, and the API stays open.
+- If you added the integration by hand (Docker, or the add-on without discovery), remove it and add it again with the token: for Docker it is `API_TOKEN_AUTO` in your `.env`; for the add-on, accept the discovered add-on, or set your own `api_token` and use the same one in the integration. A token you set yourself is required from the start, as before.
+- **Docker Compose:** the server records that the token is in use in a new `server_state` volume, so `docker-compose.yml` changed; `scripts/deploy.sh` (or `docker compose up -d`) creates the volume. `deploy.sh` also makes `.env` readable by its owner only, since it holds your Home Assistant token.
+- **Does anything else talk to Home Mind directly, such as your own scripts or tools?** Once the integration uses the token, they need it too, as `Authorization: Bearer <token>`. With Docker, it is `API_TOKEN_AUTO` in your `.env`. With the add-on you can't see the generated token, so set your own `api_token` in the add-on's options and use it there; the add-on hands it to the integration (0.11.0 or later) by itself.
+- Refused requests (401 and 403) now show up in the request log, and `API_TOKEN` is read without surrounding spaces.
+
+## [0.20.3] - 2026-11-20
+
+A security update; we recommend installing it.
+
+### Security (ha/service-policy.ts, ha/client.ts, ha/exposure.ts)
+- **The assistant sticks to everyday device control, whoever asks.** It switches and dims, works locks, covers, climate, media players and vacuums, runs your exposed scripts and scenes, sets helpers and timers, and uses your to-do lists, calendars, weather, announcements and notifications. Everything else is off-limits: restarting or stopping Home Assistant, the host, add-ons and backups, shell and REST commands, MQTT, and the services other integrations add for themselves. To let it run something beyond this, put it in a script and expose the script to Assist. This holds with `TOOLS_FROM_EXPOSED=false` too.
+- **Every request has to name what it acts on.** A call that names no device is only carried out for notifications and the shopping list; anything else needs an entity you have exposed. Device and service names are also checked before they reach Home Assistant, devices named inside a call's fields are held to the same list, a notification goes to the recipients you set up, not to one the assistant picks, media plays from your music and video libraries (such as Jellyfin, Plex, DLNA servers or Music Assistant), radio stations, audio from your local media folder and streaming services, but not from camera recordings, photo libraries or web addresses, and the assistant sends an alarm or lock code only a few times in ten minutes.
+- **If nothing is exposed, Home Mind reaches nothing.** Until now, exposing nothing meant there was no limit at all. Now the assistant can't see or control any device until you expose some, and a notification in Home Assistant explains how (Settings → Voice assistants → Expose). Home Assistant exposes common devices such as lights and switches by default, so most homes notice no change. While Home Assistant can't yet say what is exposed, Home Mind waits instead of guessing, tells you in a notification if that lasts, and the home layout follows the same rule.
+- **A self-signed certificate works for the exposure list too.** With `HA_SKIP_TLS_VERIFY=true`, the list of exposed devices is now read with the same setting as every other request; before, it could not be read on such a setup.
+- **The example configuration no longer turns off certificate checks.** `.env.example` set `HA_SKIP_TLS_VERIFY=true`; it is now a commented opt-in for a self-signed certificate on a network you trust. If you copied the old example and reach Home Assistant over `https://` with a real certificate, set it to `false` or remove it.
+
+**Recommended: protect the API with a token.** Home Mind's API on port 3100 accepts requests without a token unless you set one. Choose a long random token, set it as `api_token` in the add-on's options (or `API_TOKEN` in `.env` for Docker Compose) and restart; then remove the Home Mind integration in Home Assistant and add it again, entering the same token. Your memories stay on the server. A later version will set this up for you.
+
+No other configuration changes. The Home Mind add-on picks this up in its next version.
 
 ## [0.20.2] - 2026-10-31
 

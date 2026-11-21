@@ -1,9 +1,14 @@
 import "dotenv/config";
 import express from "express";
-import cors from "cors";
 import { createRequire } from "module";
 import { loadConfig } from "./config.js";
-import { createAuthMiddleware } from "./api/auth.js";
+import { createAuthMiddleware, type AutomaticToken } from "./api/auth.js";
+import { listenOrExit } from "./api/listen.js";
+import {
+  OPEN_API_NOTICE,
+  UNPROTECTED_API_NOTIFICATION_ID,
+  scheduleApiTokenNotice,
+} from "./jobs/api-token-notice.js";
 import { JSON_BODY_OPTIONS } from "./api/json-body.js";
 
 // Read version from package.json
@@ -16,10 +21,9 @@ import { DeviceScanner } from "./ha/device-scanner.js";
 import { DEFAULT_LAYOUT_DOMAINS, TopologyScanner } from "./ha/topology-scanner.js";
 import { fetchExposedEntities } from "./ha/exposed-entities.js";
 import { AssistExposure } from "./ha/exposure.js";
+import { scheduleNothingExposedNotice } from "./jobs/nothing-exposed-notice.js";
 import { createChatEngine, createFactExtractor } from "./llm/factory.js";
 import { createRouter } from "./api/routes.js";
-import { createSttService } from "./stt/stt-service.js";
-import { createTtsService } from "./tts/tts-service.js";
 import { MemoryCleanupJob } from "./jobs/memory-cleanup.js";
 
 // Load configuration
@@ -55,7 +59,9 @@ console.log(`  Fact extractor: ${config.llmProvider}/${config.llmModel}`);
 // tools — Home Assistant filters both from the same list, and when the two
 // disagreed the layout honoured the user's choices while `search_entities`
 // returned every entity in the house.
-const exposure = new AssistExposure(() => fetchExposedEntities(config.haUrl, config.haToken));
+const exposure = new AssistExposure(() =>
+  fetchExposedEntities(config.haUrl, config.haToken, { skipTlsVerify: config.haSkipTlsVerify })
+);
 
 const ha = new HomeAssistantClient(config, config.toolsFromExposed ? exposure : undefined);
 console.log(`  Home Assistant: ${config.haUrl}`);
@@ -93,40 +99,27 @@ console.log(`  ✓ Topology scanner: home layout ${topology.hasLayout() ? "loade
 const llm = createChatEngine(config, memory, conversations, extractor, ha, scanner, topology);
 console.log(`  LLM client: ${config.llmProvider}/${config.llmModel}`);
 
-// Initialize STT (optional — only when STT_PROVIDER is set)
-const stt = createSttService(config);
-if (stt) {
-  console.log(`  STT: ${config.sttProvider} / ${config.sttModel}`);
-} else {
-  console.log("  STT: disabled");
-}
-
-// Initialize TTS (optional — only when TTS_PROVIDER is set)
-const tts = createTtsService(config);
-if (tts) {
-  console.log(`  TTS: ${config.ttsProvider} / ${config.ttsModel} (voice: ${config.ttsVoice})`);
-} else {
-  console.log("  TTS: disabled");
-}
-
 // Create Express app
 const app = express();
-
-// CORS middleware (only when CORS_ORIGINS is configured)
-if (config.corsOrigins) {
-  const origins = config.corsOrigins.split(",").map((o) => o.trim());
-  app.use(cors({ origin: origins, credentials: true }));
-  console.log(`  CORS: ${origins.join(", ")}`);
-}
 
 // Refuses compressed bodies before the token check: see api/json-body.ts.
 app.use(express.json(JSON_BODY_OPTIONS));
 
-// API token auth (only when API_TOKEN is configured)
-const authMiddleware = createAuthMiddleware(config.apiToken);
-app.use("/api", authMiddleware);
-
-// Add request logging
+// API token auth: API_TOKEN is enforced from the start, a generated
+// API_TOKEN_AUTO from the first request that carries it (see api/auth.ts).
+const automaticToken: AutomaticToken | undefined =
+  !config.apiToken && config.apiTokenAuto
+    ? {
+        token: config.apiTokenAuto,
+        confirmedPath: config.apiTokenStatePath,
+        onConfirmed: () => {
+          ha.callService("persistent_notification", "dismiss", undefined, {
+            notification_id: UNPROTECTED_API_NOTIFICATION_ID,
+          }).catch(() => {});
+        },
+      }
+    : undefined;
+// Log every request, refused ones included
 app.use((req, res, next) => {
   const start = Date.now();
   res.on("finish", () => {
@@ -136,8 +129,22 @@ app.use((req, res, next) => {
   next();
 });
 
+const authMiddleware = createAuthMiddleware(config.apiToken, automaticToken);
+app.use("/api", authMiddleware);
+console.log(
+  `  API token: ${
+    config.apiToken
+      ? "required"
+      : automaticToken
+        ? authMiddleware.enforced()
+          ? "required (generated, in use by the integration)"
+          : "generated, not yet used by the integration: the API stays open until it is"
+        : "none: anything that can reach the port can use the API"
+  }`
+);
+
 // Mount API routes
-app.use("/api", createRouter(llm, memory, "shodh", version, config.customPrompt, conversations, stt ?? undefined, tts ?? undefined));
+app.use("/api", createRouter(llm, memory, "shodh", version, config.customPrompt, conversations));
 
 // Root endpoint
 app.get("/", (_req, res) => {
@@ -157,7 +164,7 @@ app.get("/", (_req, res) => {
 });
 
 // Start server
-app.listen(config.port, () => {
+listenOrExit(app, config.port, () => {
   console.log(`
 ┌─────────────────────────────────────────┐
 │      Home Mind Server Started           │
@@ -178,10 +185,25 @@ Ready to accept requests at http://localhost:${config.port}
 const cleanupJob = new MemoryCleanupJob(memory, conversations, config.memoryCleanupIntervalHours);
 cleanupJob.start();
 
+// With the tools bounded, a home that exposes nothing gives the assistant
+// nothing to reach; tell the user why rather than leave Home Mind looking broken.
+// A generated token protects nothing until the integration uses it: say so.
+// With a token of the user's own it is enforced from the start, and the check
+// clears a notice left from before it was set. With no token at all, say that.
+const cancelApiTokenNotice = scheduleApiTokenNotice(ha, () => authMiddleware.enforced(), {
+  notice: config.apiToken || automaticToken ? undefined : OPEN_API_NOTICE,
+});
+
+const cancelExposureNotice = config.toolsFromExposed
+  ? scheduleNothingExposedNotice(ha, exposure)
+  : () => {};
+
 // Graceful shutdown
 process.on("SIGTERM", () => {
   console.log("Shutting down...");
   cleanupJob.stop();
+  cancelExposureNotice();
+  cancelApiTokenNotice();
   conversations.close();
   memory.close();
   process.exit(0);
@@ -190,6 +212,8 @@ process.on("SIGTERM", () => {
 process.on("SIGINT", () => {
   console.log("Shutting down...");
   cleanupJob.stop();
+  cancelExposureNotice();
+  cancelApiTokenNotice();
   conversations.close();
   memory.close();
   process.exit(0);

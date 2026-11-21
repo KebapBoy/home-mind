@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.22.1
+
+- **If the add-on's port is already in use, the server stops and says why** in the add-on log, so the add-on can start it again once the port is free, rather than showing "Ready" for a server that cannot answer. Server 0.22.1; no settings to change.
+
+## 0.22.0
+
+- **The "not protected yet" reminder comes back every 6 hours while it applies.** Home Assistant forgets notifications when it restarts; the reminder now returns until the Home Mind integration uses the API token, and stops then.
+- **The speech-to-text, text-to-speech and CORS options are removed.** They served a companion app that was never released; voice through Assist is unaffected and works as before. If you had set any of them, the Supervisor log mentions that each one no longer exists, which is harmless. Server 0.22.0; no settings to change.
+
+## 0.21.0
+
+- **The add-on now protects its API with a token by itself.** If you haven't set `api_token`, the add-on creates one and hands it to the Home Mind integration. Update the integration in HACS to 0.11.0 and restart Home Assistant: it picks the token up and starts using it, and from then on the API refuses requests without it. Until then a notification says the API is not protected yet, and everything works as before.
+- **Do your own scripts or tools call the add-on's API directly?** They need the token too once the integration uses it, and you can't see the generated one. Set your own `api_token` in the add-on's options and use it there; the add-on hands it to the integration by itself.
+- If you added the integration by hand rather than from the discovered add-on, remove it and accept the discovered add-on instead. A token you set yourself is required from the start, as before. Server 0.21.0.
+
+## 0.20.3
+
+- **A security update; we recommend installing it.** The assistant now sticks to everyday device control, whoever asks: it switches and dims, works locks, covers, climate, media players and vacuums, runs your exposed scripts and scenes, sets helpers and timers, and uses your to-do lists, calendars, weather, announcements and notifications. Restarting Home Assistant, the host, add-ons and backups, shell and REST commands, MQTT and other integrations' own services are off-limits. To let it run something more, put it in a script and expose the script to Assist.
+- **If nothing is exposed to Assist, the assistant reaches nothing.** Until now, exposing nothing meant there was no limit at all. A notification explains how to expose devices (Settings → Voice assistants → Expose); most homes already expose lights and switches by default and notice no change.
+- Every request has to name the device it acts on, media plays from your libraries, radio stations, local audio and streaming services, and an alarm or lock code is sent only a few times in ten minutes. Server 0.20.3; no settings to change.
+- **Recommended: protect the API with a token.** Home Mind's API on port 3100 accepts requests without a token unless you set one. Choose a long random token, set it as `api_token` in the add-on's options (or `API_TOKEN` in `.env` for Docker Compose) and restart; then remove the Home Mind integration in Home Assistant and add it again, entering the same token. Your memories stay on the server. A later version will set this up for you.
+
 ## 0.20.2
 
 - **Steadier answers on follow-ups.** On newer models such as Claude Haiku 5.5, a follow-up or a simple thanks could make the assistant take back a correct answer or look everything up again. It now stands by what it checked, and looks again when you ask it to or when something may have changed. No settings to change.

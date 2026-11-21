@@ -182,7 +182,7 @@ That repository is the current, maintained integration: v0.10.1+, with a field f
 cp -r src/ha-integration/custom_components/home_mind /config/custom_components/
 ```
 
-> The copy vendored here is an older snapshot (v0.9.3) kept for offline installs. It predates API token support, so if you've set `API_TOKEN` on the server every request from it returns 401. Use HACS in that case.
+> The copy vendored here is an older snapshot (v0.9.3) kept for offline installs. It predates API token support, so once the server requires a token (`API_TOKEN`, or since 0.21.0 the generated `API_TOKEN_AUTO` after its first use) every request from it returns 401. Use HACS instead.
 
 ### 4. Configure in Home Assistant
 
@@ -283,9 +283,9 @@ Only specify what needs changing. Unspecified fields use auto-detected values.
 **[Nives](https://github.com/hoornet/nives)** (formerly HomeMind PRO) is this project's sister: it began as a fork of this server, so the core (conversation engine and memory layer) is shared heritage. They're now maintained as two independent products for two kinds of people:
 
 - **Home Mind (this repo)** is the DIY path: you pick every model, you can run it anywhere (Docker Compose on Proxmox, a NAS, bare Docker), and there is an add-on for Home Assistant OS if you'd rather not manage a Docker host. You still install the integration and wire it up yourself. Full control by design.
-- **Nives** is the batteries-included one: a self-installing companion integration, no terminal at any point, and features this repo deliberately doesn't have: automation create/edit/delete by voice (behind a confirmation gate), an AI Task provider with camera-snapshot vision, Voice PE mic reopening, arm64 for Raspberry Pi, and an optional managed-key Cloud (pay-as-you-go tickets, no subscription).
+- **Nives** is the batteries-included one: a self-installing companion integration, no terminal at any point, and features this repo deliberately doesn't have: automation create/edit/delete by voice (behind a confirmation gate), an AI Task provider with camera-snapshot vision, Voice PE mic reopening, and arm64 for Raspberry Pi.
 
-Both are AGPL-3.0 with open repos, and both are maintained. Nives's assistant isn't gated either: its BYOK mode is free and does everything the paid path does, and the one Cloud-only extra is optional transcription, since that's billed per use. Pick by temperament: own every moving part here, or have it just work there.
+Both are AGPL-3.0 with open repos, both are maintained, and both run on your own key. Pick by temperament: own every moving part here, or have it just work there.
 
 Both install paths for this repo, the add-on and Docker Compose, are in the [Quick Start](#quick-start) above.
 
@@ -309,8 +309,6 @@ Both install paths for this repo, the add-on and Docker Compose, are in the [Qui
 - [x] Per-entity device overrides (`DEVICE_OVERRIDES`) for firmware quirks
 - [x] Home Layout Index (floor/room awareness via HA template API)
 - [x] Conversational forgetting (`forget_memory`, confirmed before deleting)
-- [x] Server-side STT (`POST /api/stt`, OpenAI Whisper)
-- [x] Server-side TTS (`POST /api/tts`, OpenAI TTS API)
 - [x] Home Assistant add-on (amd64; no long-lived access token, via the Supervisor proxy)
 - [x] Nives HA Add-on (one-click install, cloud + BYOK; formerly HomeMind PRO)
 - [ ] Multi-user support (OIDC)
