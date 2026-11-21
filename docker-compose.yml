@@ -29,7 +29,7 @@ services:
     build:
       context: ./src/home-mind-server
     restart: unless-stopped
-    # Run as this uid:gid so a bind-mounted CONVERSATION_DATA_PATH owned by you is writable.
+    # Run as this uid:gid so bind-mounted CONVERSATION_DATA_PATH and SERVER_STATE_PATH owned by you are writable.
     user: "${PUID:-1001}:${PGID:-1001}"
     ports:
       - "127.0.0.1:${PORT:-3100}:3100"
@@ -60,7 +60,7 @@ services:
       - TZ=${TZ:-Europe/Prague}
     volumes:
       - ${CONVERSATION_DATA_PATH:-conversation_data}:/data
-      - server_state:/state
+      - ${SERVER_STATE_PATH:-server_state}:/state
     depends_on:
       shodh:
         condition: service_healthy

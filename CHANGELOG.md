@@ -8,6 +8,7 @@ Modified version of [hoornet/home-mind](https://github.com/hoornet/home-mind), b
 
 ### Changed (docker-compose.yml, docker/shodh/entrypoint.sh)
 - **Shodh and the server run as a configurable user.** `PUID` and `PGID` set the uid:gid both containers run as (Shodh defaults to 1000, the server to 1001), and Shodh's entrypoint hands `/data` to that user, so bind-mounted data stays owned by you. `CONVERSATION_DATA_PATH` lets the conversation store be a bind mount instead of the `conversation_data` volume. Optional; without them nothing changes.
+- **The generated API token stays required across restarts with a custom `PUID`.** The image gives `/state`, where the server records that `API_TOKEN_AUTO` is in use, to uid 1001, so a server running as another `PUID` could not write it and fell back to an open API after every restart. `SERVER_STATE_PATH` makes `/state` a bind mount owned by you; set it whenever `PUID` is not 1001 and you rely on the generated token. Not needed when you set `API_TOKEN` yourself.
 - **Shodh and the server stay off the LAN.** Shodh no longer publishes port 3030, since only the server talks to it over the Compose network, and the server binds to `127.0.0.1`. A Home Assistant on another machine therefore needs a reverse proxy in front of the server, or the port mapping changed back.
 - **No fixed container names.** Compose names the containers per project, so the stack can be deployed under any project name, for example by Dockhand. Containers are now called `<project>-shodh-1` and `<project>-server-1`.
 
