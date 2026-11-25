@@ -52,6 +52,7 @@ Finally set Home Mind as the conversation agent under
 | `openai_api_key` | Required for `openai`. |
 | `openai_base_url` | Override for OpenAI-compatible endpoints. |
 | `openai_max_tokens` | Response cap for OpenAI. |
+| `reasoning_effort` | `none`, `minimal`, `low`, `medium` or `high`, sent as `reasoning_effort` on OpenAI-compatible calls. Leave empty to not send it. Newer OpenAI models such as `gpt-6-luna` refuse tools on this API unless it is `none`; Gemini works best with `low`. A model that rejects the setting gets it no more. |
 | `ollama_base_url` | Required for `ollama`, e.g. `http://192.168.1.10:11434/v1`. |
 
 ### Behaviour
@@ -59,6 +60,7 @@ Finally set Home Mind as the conversation agent under
 | Option | Default | Description |
 |---|---|---|
 | `custom_prompt` | — | Extra system prompt. Gives the assistant a name and personality. |
+| `action_done_reply` | `Done.` | What the assistant says when it has carried out an action but the model added no words of its own, which some OpenAI-compatible models such as Gemini often do. Set it in the language you speak to it, e.g. `Hotovo.` or `Erledigt.`. Used with the `openai` and `ollama` providers. |
 | `max_output_tokens` | — | How much room one written answer gets, in tokens. Leave it empty and Home Mind chooses. Raise it if long answers stop before they finish, which is most likely when you ask about several sensors at once or over a long period. Spoken answers are not affected. |
 | `device_overrides` | — | JSON of per-entity light capability overrides, e.g. `{"light.kitchen": {"whiteMethod": "rgb_white"}}`. Use when a light reports the wrong colour modes. |
 | `layout_from_exposed` | on | Build the home layout from the entities exposed to Assist (Settings, Voice assistants, Expose). Off filters by device type instead. |

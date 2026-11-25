@@ -4,7 +4,7 @@ All notable changes to Home Mind are documented here.
 
 ## [Unreleased] - KebapBoy fork, 2026-11-07
 
-Modified version of [hoornet/home-mind](https://github.com/hoornet/home-mind), based on 0.22.1 (`9bc8c8f`). These changes are not part of an upstream release.
+Modified version of [hoornet/home-mind](https://github.com/hoornet/home-mind), based on 0.22.1 (`369c8d1`). These changes are not part of an upstream release.
 
 ### Changed (docker-compose.yml, docker/shodh/entrypoint.sh)
 - **Shodh and the server run as a configurable user.** `PUID` and `PGID` set the uid:gid both containers run as (Shodh defaults to 1000, the server to 1001), and Shodh's entrypoint hands `/data` to that user, so bind-mounted data stays owned by you. `CONVERSATION_DATA_PATH` lets the conversation store be a bind mount instead of the `conversation_data` volume. Optional; without them nothing changes.
