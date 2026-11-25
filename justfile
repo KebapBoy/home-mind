@@ -5,8 +5,12 @@
 default:
     @just --list
 
-# Type check and tests of the server
-check:
+# Install the server's dependencies exactly as the lockfile pins them
+install:
+    cd src/home-mind-server && npm ci
+
+# Type check and tests of the server, after installing what the lockfile pins
+check: install
     cd src/home-mind-server && npm run typecheck && npm test
 
 # Show what upstream has that this fork does not, and whether merging it conflicts

@@ -23,7 +23,7 @@ Modified version of [hoornet/home-mind](https://github.com/hoornet/home-mind), b
 
 ### Added (files only in this fork)
 - **`.devcontainer/`** (`devcontainer.json`, `Dockerfile`) is a development container for the server: Node 24, the build tools `better-sqlite3` may need, and the tooling to merge upstream and deploy this fork. Open it from a copy outside the repository; see the comments in `devcontainer.json`. It has no dev server, because the server needs Shodh and a Home Assistant token.
-- **`justfile`** has `check` (type check and tests of the server), `fork-sync` (what upstream has that this fork does not) and `deploy` (deploys `main`; this fork has no releases).
+- **`justfile`** has `install` (`npm ci` for the server), `check` (installs first, so it tests against the lockfile even right after a merge changed it; then type check and tests of the server), `fork-sync` (what upstream has that this fork does not) and `deploy` (deploys `main`; this fork has no releases).
 
 ### Added (scripts/diff.sh, .gitignore)
 - **`scripts/diff.sh`** shows what an update from `origin/main` would bring, without pulling, merging or deploying, and warns where it touches files you changed locally.
