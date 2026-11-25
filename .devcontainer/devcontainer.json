@@ -1,0 +1,51 @@
+// Devcontainer of this fork: stage "dev" of the Dockerfile next to this file (Node 24), the dev-kit
+// feature (Claude Code with the shared configuration, git, just, dev-kit). There is no dev server:
+// the server needs Shodh and a Home Assistant token, which do not belong in a container that runs
+// code from upstream. just check runs the type check and the tests.
+//
+// The host does not use this file or the Dockerfile from the repository: copy both to
+// ~/.config/dev-kit/home-mind/.devcontainer/ and open ~/.config/dev-kit/home-mind in VS Code
+// ("Reopen in Container"). The code lives in the Docker volume home-mind-workspace, never on the
+// host, and code in the container cannot change how the host builds and starts it. Take changes to
+// the two files over by hand, after reading them (dev-kit-host diff home-mind shows them).
+{
+    "name": "home-mind",
+    // Runs on the host before the container starts (dev-kit-host from the dev-kit repository):
+    // copies your ~/.claude/CLAUDE.md to ~/.config/dev-kit/, clones the repository into the volume
+    // home-mind-workspace the first time, and warns if this file or the Dockerfile differs from the
+    // repository's
+    "initializeCommand": "~/.config/dev-kit/bin/dev-kit-host prepare home-mind git@github.com:KebapBoy/home-mind.git",
+    // The host's copy of the Dockerfile next to this file; the stage dev needs nothing else
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": ".",
+        "target": "dev"
+    },
+    "workspaceMount": "source=home-mind-workspace,target=/workspaces/home-mind,type=volume",
+    "workspaceFolder": "/workspaces/home-mind",
+    "remoteUser": "dev",
+    "features": {
+        "ghcr.io/kebapboy/dev-kit/dev-kit:1": {}
+    },
+    // From the host, read-only: your CLAUDE.md, the managed Claude Code settings and this
+    // repository's folder etc next to .devcontainer (deploy settings, deploy key, host keys)
+    "mounts": [
+        "source=${localEnv:HOME}/.config/dev-kit/CLAUDE.md,target=/var/lib/dev-kit/claude/CLAUDE.md,type=bind,readonly",
+        "source=${localEnv:HOME}/.config/dev-kit/claude-code,target=/etc/claude-code,type=bind,readonly",
+        "source=${localWorkspaceFolder}/etc,target=/etc/dev-kit,type=bind,readonly"
+    ],
+    // git fetches with the repository's read-only deploy key from etc (dev-kit-host prepare
+    // creates it); the forwarded SSH agent should hold only your signing key, so the container
+    // signs commits but cannot push: push from the host with dev-kit-host push
+    "remoteEnv": {
+        "GIT_SSH_COMMAND": "ssh -i /etc/dev-kit/deploy-key -o IdentitiesOnly=yes -o UserKnownHostsFile=/etc/dev-kit/known_hosts -o StrictHostKeyChecking=yes"
+    },
+    "postCreateCommand": "cd src/home-mind-server && npm ci",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "vitest.explorer"
+            ]
+        }
+    }
+}
